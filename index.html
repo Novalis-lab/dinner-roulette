@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>今日の晩ごはんルーレット｜献立に迷ったら回すだけ｜novalis</title>
+<meta name="description" content="今日の晩ごはん、何にする？ ルーレットを回すだけで献立が決まる無料ツール。和食・洋食・中華などジャンルを選んだり、家の定番メニューを自分で入れたりできます。">
+<link rel="canonical" href="https://novalis-lab.github.io/dinner-roulette/">
+<meta name="theme-color" content="#0b0b0d">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="novalis">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:url" content="https://novalis-lab.github.io/dinner-roulette/">
+<meta property="og:title" content="今日の晩ごはんルーレット｜献立に迷ったら回すだけ">
+<meta property="og:description" content="ルーレットを回すだけで今日の晩ごはんが決まる無料ツール。ジャンル選びや、自分のメニューでも回せます。">
+<meta property="og:image" content="https://novalis-lab.github.io/ogp.png?v=20261113">
+<meta name="twitter:card" content="summary_large_image">
+<!-- サイトのアイコン（novalis共通のロゴ） -->
+<link rel="icon" href="https://novalis-lab.github.io/icon.svg" type="image/svg+xml">
+<link rel="icon" href="https://novalis-lab.github.io/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="https://novalis-lab.github.io/apple-touch-icon.png">
+<!-- 全ページ共通（フォント：Zen Maru Gothic・Unbounded／角の丸み） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://novalis-lab.github.io/common.css?v=20261113c">
+<style>
+/* 色はトップページ（novalis）とそろえています。
+   フォント（--font・--font-en）と角の丸み（--radius）は common.css で共通管理 */
+:root{
+  --bg:#0b0b0d; --card:rgba(255,255,255,.025);
+  --ink:#f2f0ea; --sub:#8b8a86; --dim:#5d5c58;
+  --line:rgba(255,255,255,.12); --field:#08080a;
+  --accent:#6f9fd4; --accent-rgb:111,159,212; --accent-ink:#0b0b0d;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;color-scheme:dark}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:18px;line-height:1.6;overflow-x:hidden}
+::selection{background:var(--accent);color:var(--accent-ink)}
+.hidden{display:none !important}
+
+/* ---------- 背景（縦のガイド線と斜めのライン：トップページと同じ） ---------- */
+.bg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.bg-cols{position:absolute;inset:0;max-width:592px;margin:0 auto;border-left:1px solid rgba(255,255,255,.05);border-right:1px solid rgba(255,255,255,.05)}
+.bg-slash{position:absolute;top:-10%;right:-30%;width:90%;height:120%;
+  background:repeating-linear-gradient(-55deg,rgba(255,255,255,.04) 0 1px,transparent 1px 14px);
+  -webkit-mask-image:linear-gradient(200deg,#000 10%,transparent 55%);mask-image:linear-gradient(200deg,#000 10%,transparent 55%);
+  animation:drift 14s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate(-60px,24px)}}
+
+.wrap{max-width:592px;margin:0 auto;padding:0 16px calc(24px + env(safe-area-inset-bottom))}
+
+/* ---------- 上のバーと見出し ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 0;border-bottom:1px solid var(--line);
+  font-family:var(--font-en);font-size:10px;font-weight:700;letter-spacing:.22em}
+.logo{display:inline-flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-weight:800;font-size:13px;letter-spacing:.18em}
+.logo-mark{width:11px;height:11px;background:var(--accent);transform:rotate(45deg)}
+.logo:hover{color:var(--accent)}
+.topbar a.back{color:var(--sub);text-decoration:none}
+.topbar a.back:hover{color:var(--accent)}
+.kicker{display:flex;align-items:center;gap:12px;margin:30px 0 10px;font-family:var(--font-en);font-size:11px;font-weight:700;letter-spacing:.3em;color:var(--sub)}
+.kicker::before{content:"";width:32px;height:1px;background:var(--accent)}
+h1{font-size:clamp(28px,8.4vw,40px);margin:0;line-height:1.3;letter-spacing:.02em;font-weight:700}
+h1 .u-line{background:linear-gradient(transparent 84%,var(--accent) 84%,var(--accent) 94%,transparent 94%) no-repeat left/0% 100%;
+  animation:underline .9s cubic-bezier(.7,0,.2,1) .4s forwards}
+@keyframes underline{to{background-size:100% 100%}}
+.lead{color:var(--sub);font-size:.92rem;margin:14px 0 0;padding-top:14px;border-top:1px solid var(--line)}
+
+/* ---------- カード（番号つき） ---------- */
+main{counter-reset:card}
+.card{counter-increment:card;margin-top:20px;padding:22px 18px 20px;background:var(--card);border:1px solid var(--line);border-top:1px solid var(--ink);border-radius:var(--radius,8px)}
+h2{margin:0 0 16px;font-size:20px;font-weight:700;letter-spacing:.02em}
+h2::before{content:counter(card,decimal-leading-zero) " /";display:block;margin-bottom:4px;font-family:var(--font-en);font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--accent)}
+.lbl{display:block;margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.16em;color:var(--sub)}
+.field+.field{margin-top:18px}
+.note{margin:12px 2px 0;font-size:12.5px;line-height:1.6;color:var(--sub)}
+
+/* ---------- ルーレット ---------- */
+.stage{position:relative;width:min(100%,420px);margin:6px auto 0;aspect-ratio:1/1}
+.pointer{position:absolute;top:-6px;left:50%;z-index:2;width:0;height:0;transform:translateX(-50%);
+  border-left:16px solid transparent;border-right:16px solid transparent;border-top:30px solid var(--ink);
+  filter:drop-shadow(0 0 8px rgba(var(--accent-rgb),.8))}
+.wheel-wrap{position:absolute;inset:0;border-radius:50%;
+  box-shadow:0 0 0 6px var(--bg),0 0 0 8px rgba(var(--accent-rgb),.9),0 0 30px 6px rgba(var(--accent-rgb),.45),0 0 80px 14px rgba(var(--accent-rgb),.18)}
+.wheel-wrap.spinning{animation:glow-ring 1.1s ease-in-out infinite}
+@keyframes glow-ring{50%{box-shadow:0 0 0 6px var(--bg),0 0 0 8px rgba(var(--accent-rgb),1),0 0 40px 10px rgba(var(--accent-rgb),.65),0 0 100px 20px rgba(var(--accent-rgb),.28)}}
+svg.wheel{display:block;width:100%;height:100%;transition:transform 4.6s cubic-bezier(.12,.62,.06,1);will-change:transform}
+svg.wheel text{font-family:var(--font);font-weight:700;fill:#0b0b0d;pointer-events:none}
+.hub{position:absolute;top:50%;left:50%;z-index:2;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;
+  background:#0b0b0d;border:2px solid rgba(255,255,255,.2);display:grid;place-items:center;
+  font-family:var(--font-en);font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--ink)}
+
+.spin{position:relative;display:flex;align-items:center;justify-content:center;gap:14px;width:100%;margin-top:26px;min-height:62px;
+  border:0;border-radius:var(--radius,8px);background:var(--accent);color:var(--accent-ink);font:inherit;font-size:19px;font-weight:700;cursor:pointer;
+  overflow:hidden;isolation:isolate;box-shadow:0 0 18px 2px rgba(var(--accent-rgb),.55),0 0 48px 6px rgba(var(--accent-rgb),.28);animation:glow-btn 2.8s ease-in-out infinite}
+@keyframes glow-btn{50%{box-shadow:0 0 26px 4px rgba(var(--accent-rgb),.75),0 0 70px 14px rgba(var(--accent-rgb),.38)}}
+.spin::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--ink);transform:scaleX(0);transform-origin:right;transition:transform .4s cubic-bezier(.7,0,.2,1)}
+.spin:hover::before{transform:scaleX(1);transform-origin:left}
+.spin:disabled{opacity:.55;cursor:wait;animation:none}
+.spin:disabled::before{transform:scaleX(0)}
+.spin .en{font-family:var(--font-en);font-size:12px;letter-spacing:.2em}
+
+.sub-btns{display:flex;gap:8px;margin-top:10px}
+.ghost{flex:1;min-height:48px;border:1px solid var(--line);border-radius:var(--radius,8px);background:transparent;color:var(--sub);
+  font:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:color .2s,border-color .2s}
+.ghost:hover{color:var(--accent);border-color:var(--accent)}
+.ghost:disabled{opacity:.4;cursor:default}
+
+/* 結果 */
+.result{margin-top:20px;padding:20px 18px;border-radius:var(--radius,8px);background:var(--accent);color:var(--accent-ink);text-align:center;
+  box-shadow:0 0 20px 2px rgba(var(--accent-rgb),.45),0 0 54px 8px rgba(var(--accent-rgb),.2);animation:pop .5s cubic-bezier(.3,1.5,.5,1),glow 2.8s ease-in-out .5s infinite}
+@keyframes pop{from{transform:scale(.9);opacity:0}}
+@keyframes glow{50%{box-shadow:0 0 28px 4px rgba(var(--accent-rgb),.65),0 0 76px 14px rgba(var(--accent-rgb),.3)}}
+.result .cap{font-family:var(--font-en);font-size:11px;font-weight:700;letter-spacing:.24em;opacity:.7}
+.result .emoji{display:block;margin-top:6px;font-size:52px;line-height:1.2}
+.result .name{display:block;margin-top:2px;font-size:30px;font-weight:700;line-height:1.35}
+.result .msg{display:block;margin-top:4px;font-size:14px;font-weight:700;opacity:.75}
+.result.empty{background:transparent;color:var(--sub);border:1px dashed var(--line);box-shadow:none;animation:none;font-size:15px}
+
+/* 候補の選び方 */
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:var(--radius,8px);overflow:hidden}
+.seg button{font:inherit;font-size:15px;font-weight:700;min-height:52px;padding:6px 8px;border:0;background:transparent;color:var(--sub);cursor:pointer;transition:color .2s,background .2s}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{min-height:44px;padding:6px 15px;border:1px solid var(--line);border-radius:var(--radius,8px);background:transparent;color:var(--sub);
+  font:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s}
+.chips button:hover{color:var(--ink);border-color:var(--accent)}
+.chips button[aria-pressed="true"]{color:var(--accent);border-color:var(--accent);background:rgba(var(--accent-rgb),.12);box-shadow:0 0 0 2px rgba(var(--accent-rgb),.15)}
+textarea{width:100%;min-height:200px;padding:12px 14px;border:1px solid rgba(255,255,255,.2);border-radius:var(--radius,8px);background:var(--field);color:var(--ink);
+  font:inherit;font-size:17px;line-height:1.7;resize:vertical;caret-color:var(--accent)}
+textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 20px 2px rgba(var(--accent-rgb),.35)}
+
+/* 最近の結果 */
+.history{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.history li{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);font-size:16px;font-weight:700}
+.history .no{font-family:var(--font-en);font-size:11px;color:var(--accent);letter-spacing:.1em;min-width:2.4em}
+.history .e{font-size:22px}
+.history .empty{color:var(--sub);font-weight:500;font-size:14px;justify-content:center}
+
+/* ---------- 斜めに流れる帯（トップページと同じ） ---------- */
+.ticker-wrap{position:relative;margin:36px -16px 0;padding:40px 0;overflow:hidden;overflow-x:clip;overflow-y:visible}
+.ticker{margin:0 -5%;padding:11px 0;background:var(--accent);color:var(--accent-ink);transform:rotate(-2.5deg);overflow:hidden;white-space:nowrap;
+  box-shadow:0 0 18px 2px rgba(var(--accent-rgb),.5),0 0 48px 6px rgba(var(--accent-rgb),.22);animation:glow-band 2.8s ease-in-out infinite}
+@keyframes glow-band{50%{box-shadow:0 0 26px 4px rgba(var(--accent-rgb),.7),0 0 70px 12px rgba(var(--accent-rgb),.32)}}
+.ticker-track{display:inline-flex;animation:marquee 26s linear infinite}
+.ticker-track span{display:inline-flex;align-items:center;gap:22px;padding-right:22px;font-family:var(--font-en);font-weight:800;font-size:15px;letter-spacing:.06em}
+.ticker-track span::after{content:"✦";font-size:.8em}
+@keyframes marquee{to{transform:translateX(-50%)}}
+
+/* ---------- フッター ---------- */
+footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:var(--radius,8px);color:var(--sub);font-size:14px;text-align:center}
+.more{position:relative;display:flex;align-items:center;justify-content:space-between;margin:28px auto 0;max-width:340px;min-height:58px;padding:0 22px 0 26px;
+  border-radius:var(--radius,8px);background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:16px;text-decoration:none;overflow:hidden;isolation:isolate;
+  box-shadow:0 0 18px 2px rgba(var(--accent-rgb),.55),0 0 48px 6px rgba(var(--accent-rgb),.28);animation:glow-btn 2.8s ease-in-out infinite}
+.more::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--ink);transform:scaleX(0);transform-origin:right;transition:transform .4s cubic-bezier(.7,0,.2,1)}
+.more:hover::before{transform:scaleX(1);transform-origin:left}
+.site-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
+  font-family:var(--font-en);font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--sub)}
+.site-bottom a{color:inherit;text-decoration:none}
+.site-bottom a:hover{color:var(--accent)}
+.footer-logo{margin:8px 0 0;font-family:var(--font-en);font-weight:800;font-size:clamp(44px,13.5vw,96px);line-height:.85;letter-spacing:-.04em;text-align:center;white-space:nowrap;
+  color:transparent;background:repeating-linear-gradient(-55deg,rgba(255,255,255,.2) 0 2px,transparent 2px 7px);-webkit-background-clip:text;background-clip:text;user-select:none}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  h1 .u-line{background-size:100% 100%}
+}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><span class="bg-cols"></span><span class="bg-slash"></span></div>
+
+<div class="wrap">
+  <div class="topbar">
+    <a class="logo" href="https://novalis-lab.github.io/"><span class="logo-mark" aria-hidden="true"></span>NOVALIS</a>
+    <a class="back" href="https://novalis-lab.github.io/">← ALL TOOLS</a>
+  </div>
+  <header>
+    <p class="kicker">DINNER ROULETTE</p>
+    <h1>今日の<span class="u-line">晩ごはん</span>ルーレット</h1>
+    <p class="lead">献立に迷ったら、回すだけ。ジャンルを選んだり、家の定番メニューを入れたりもできます。</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>ルーレットを回す</h2>
+      <div class="stage">
+        <div class="pointer" aria-hidden="true"></div>
+        <div class="wheel-wrap" id="wheel-wrap"><svg class="wheel" id="wheel" viewBox="-200 -200 400 400" role="img" aria-label="晩ごはんのルーレット"></svg></div>
+        <div class="hub" aria-hidden="true">SPIN</div>
+      </div>
+      <button class="spin" id="spin" type="button">ルーレットを回す<span class="en" aria-hidden="true">SPIN →</span></button>
+      <div class="sub-btns">
+        <button class="ghost" id="reshuffle" type="button">候補を入れかえる</button>
+      </div>
+      <div class="result empty" id="result" aria-live="polite">ボタンを押すと、今日の晩ごはんが決まります</div>
+    </section>
+
+    <section class="card">
+      <h2>候補の選び方</h2>
+      <div class="field">
+        <div class="seg" id="mode">
+          <button type="button" data-v="preset">定番メニューから</button>
+          <button type="button" data-v="custom">自分で入力</button>
+        </div>
+      </div>
+      <div class="field" id="preset-box">
+        <span class="lbl">ジャンル（複数えらべます）</span>
+        <div class="chips" id="genres"></div>
+        <p class="note">選んだジャンルの中から、ルーレットに載せる候補を8つ選びます。「候補を入れかえる」で選び直せます。</p>
+      </div>
+      <div class="field hidden" id="custom-box">
+        <label class="lbl" for="custom">メニュー（1行に1つ・2〜20個）</label>
+        <textarea id="custom" placeholder="例&#10;カレー&#10;ハンバーグ&#10;鍋&#10;焼き魚"></textarea>
+        <p class="note">書いたメニューは、この端末のブラウザの中だけに保存されます。</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>最近の結果</h2>
+      <ul class="history" id="history"></ul>
+    </section>
+  </main>
+
+  <div class="ticker-wrap" aria-hidden="true">
+    <div class="ticker"><div class="ticker-track">
+      <span>DINNER ROULETTE</span><span>WHAT'S FOR DINNER?</span><span>NOVALIS</span>
+      <span>DINNER ROULETTE</span><span>WHAT'S FOR DINNER?</span><span>NOVALIS</span>
+      <span>DINNER ROULETTE</span><span>WHAT'S FOR DINNER?</span><span>NOVALIS</span>
+    </div></div>
+  </div>
+
+  <footer>迷ったときの気分転換に。体調やアレルギーに合わせて選んでください。</footer>
+  <a class="more" href="https://novalis-lab.github.io/">ほかのツールを見る<span aria-hidden="true">→</span></a>
+  <div class="site-bottom">
+    <a href="https://novalis-lab.github.io/">NOVALIS TOP</a>
+    <span>© NOVALIS</span>
+  </div>
+  <p class="footer-logo" aria-hidden="true">NOVALIS</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- 定番メニュー ---------- */
+  var GENRES = [
+    { id: "wa",    name: "和食" },
+    { id: "yo",    name: "洋食" },
+    { id: "chu",   name: "中華" },
+    { id: "other", name: "麺・粉もの・ほか" }
+  ];
+  var MENU = [
+    { n: "生姜焼き", e: "🐖", g: "wa" }, { n: "焼き魚", e: "🐟", g: "wa" }, { n: "肉じゃが", e: "🥔", g: "wa" },
+    { n: "親子丼", e: "🍳", g: "wa" }, { n: "天ぷら", e: "🍤", g: "wa" }, { n: "手巻き寿司", e: "🍣", g: "wa" },
+    { n: "鍋", e: "🍲", g: "wa" }, { n: "とんかつ", e: "🍱", g: "wa" }, { n: "唐揚げ", e: "🍗", g: "wa" },
+    { n: "カレー", e: "🍛", g: "yo" }, { n: "ハンバーグ", e: "🥩", g: "yo" }, { n: "オムライス", e: "🍳", g: "yo" },
+    { n: "パスタ", e: "🍝", g: "yo" }, { n: "グラタン", e: "🧀", g: "yo" }, { n: "シチュー", e: "🥣", g: "yo" },
+    { n: "ピザ", e: "🍕", g: "yo" }, { n: "ステーキ", e: "🥩", g: "yo" },
+    { n: "餃子", e: "🥟", g: "chu" }, { n: "麻婆豆腐", e: "🌶️", g: "chu" }, { n: "回鍋肉", e: "🥬", g: "chu" },
+    { n: "チャーハン", e: "🍚", g: "chu" }, { n: "エビチリ", e: "🦐", g: "chu" }, { n: "酢豚", e: "🍍", g: "chu" },
+    { n: "ラーメン", e: "🍜", g: "other" }, { n: "うどん", e: "🍜", g: "other" }, { n: "焼きそば", e: "🥢", g: "other" },
+    { n: "お好み焼き", e: "🥞", g: "other" }, { n: "タコス", e: "🌮", g: "other" }, { n: "ビビンバ", e: "🍚", g: "other" }
+  ];
+  var COLORS = ["#6f9fd4", "#d4a06a", "#8fb6e2", "#e8a0a0", "#9fd4b4", "#c9b6e8"];
+  var SIZE = 8;   // ルーレットに載せる候補の数（定番メニューのとき）
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+
+  /* ---------- 状態（モード・ジャンル・自分のメニューは端末に保存） ---------- */
+  var state = { mode: "preset", genres: ["wa", "yo", "chu", "other"], custom: "" };
+  try {
+    var saved = JSON.parse(localStorage.getItem("novalis-dinner-roulette") || "{}");
+    if (saved.mode) state.mode = saved.mode;
+    if (Array.isArray(saved.genres)) state.genres = saved.genres;
+    if (typeof saved.custom === "string") state.custom = saved.custom;
+  } catch (e) {}
+  function save() { try { localStorage.setItem("novalis-dinner-roulette", JSON.stringify(state)); } catch (e) {} }
+
+  var items = [];       // 今ルーレットに載っている候補
+  var rotation = 0;     // ルーレットの今の角度
+  var spinning = false;
+  var history = [];
+
+  function shuffle(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function customItems() {
+    var seen = {};
+    return state.custom.split(/\r?\n/).map(function (s) { return s.trim(); })
+      .filter(function (s) { if (!s || seen[s]) return false; seen[s] = 1; return true; })
+      .slice(0, 20).map(function (s) { return { n: s.slice(0, 16), e: "" }; });
+  }
+  function pickItems() {
+    if (state.mode === "custom") return customItems();
+    var pool = MENU.filter(function (m) { return state.genres.indexOf(m.g) >= 0; });
+    return shuffle(pool).slice(0, SIZE);
+  }
+
+  /* ---------- ルーレットを描く ---------- */
+  function arcPath(r, a0, a1) {
+    var p = function (a) { var t = (a - 90) * Math.PI / 180; return (r * Math.cos(t)).toFixed(2) + " " + (r * Math.sin(t)).toFixed(2); };
+    return "M0 0 L" + p(a0) + " A" + r + " " + r + " 0 " + (a1 - a0 > 180 ? 1 : 0) + " 1 " + p(a1) + " Z";
+  }
+  function drawWheel() {
+    var svg = $("wheel"), n = items.length;
+    if (n < 2) {
+      svg.innerHTML = '<circle r="196" fill="#141417"/><text text-anchor="middle" y="6" font-size="17" style="fill:#8b8a86">' +
+        (state.mode === "custom" ? "メニューを2つ以上入れてください" : "ジャンルを選んでください") + "</text>";
+      $("spin").disabled = true; return;
+    }
+    $("spin").disabled = spinning;
+    var a = 360 / n, html = "";
+    var fs = n <= 8 ? 19 : n <= 12 ? 16 : 13;
+    items.forEach(function (it, i) {
+      var c = COLORS[i % COLORS.length];
+      if (n % COLORS.length === 1 && i === n - 1) c = COLORS[1];   // 最後と最初が同じ色にならないように
+      html += '<path d="' + arcPath(196, i * a, (i + 1) * a) + '" fill="' + c + '" stroke="#0b0b0d" stroke-width="2.5"/>';
+      // 文字は扇のまん中の線にそって、中心から外へ向けて並べる（外の端に絵文字）
+      var mid = i * a + a / 2;
+      // 名前が長いときは、真ん中の「SPIN」に重ならないよう文字を小さくし、それでも入らなければ「…」で省略
+      var end = it.e ? 146 : 180, room = end - 50;                 // 50 ＝ 真ん中の丸の外側
+      var label = it.n, f = fs, len = Array.from(label).length;
+      if (len * f > room) f = Math.max(11, Math.floor(room / len));
+      if (len * f > room) { label = Array.from(label).slice(0, Math.floor(room / f) - 1).join("") + "…"; }
+      html += '<g transform="rotate(' + (mid - 90).toFixed(2) + ')">' +
+        (it.e ? '<text x="168" y="' + (fs * 0.38).toFixed(1) + '" font-size="' + (fs + 5) + '" text-anchor="middle">' + it.e + "</text>" : "") +
+        '<text x="' + end + '" y="' + (f * 0.36).toFixed(1) + '" font-size="' + f + '" text-anchor="end">' + esc(label) + "</text></g>";
+    });
+    svg.innerHTML = html;
+  }
+
+  /* ---------- 回す ---------- */
+  function spin() {
+    if (spinning || items.length < 2) return;
+    spinning = true;
+    $("spin").disabled = true; $("reshuffle").disabled = true;
+    $("wheel-wrap").classList.add("spinning");
+    var n = items.length, a = 360 / n;
+    var k = Math.floor(Math.random() * n);                          // 当たり
+    var jitter = (Math.random() - 0.5) * a * 0.7;                   // 扇の中で少しずらす
+    var want = ((360 - (k * a + a / 2 + jitter)) % 360 + 360) % 360; // 当たりが真上に来る角度
+    var now = ((rotation % 360) + 360) % 360;
+    rotation += 360 * 6 + ((want - now + 360) % 360);
+    var svg = $("wheel");
+    svg.style.transform = "rotate(" + rotation + "deg)";
+    var done = false;
+    function finish() {
+      if (done) return; done = true;
+      spinning = false;
+      $("wheel-wrap").classList.remove("spinning");
+      $("spin").disabled = false; $("reshuffle").disabled = false;
+      show(items[k]);
+    }
+    svg.addEventListener("transitionend", finish, { once: true });
+    setTimeout(finish, 5200);   // 動きを止める設定などで transitionend が来なくても結果を出す
+  }
+
+  var MSGS = ["今日はこれで決まり！", "おいしく作れますように", "迷ったらこれでいこう", "いい晩ごはんになりますように"];
+  function show(it) {
+    var r = $("result");
+    r.className = "result";
+    void r.offsetWidth;   // アニメーションをもう一度動かすため
+    r.className = "result";
+    r.innerHTML = '<span class="cap">TONIGHT\'S DINNER</span>' + (it.e ? '<span class="emoji">' + it.e + "</span>" : "") +
+      '<span class="name">' + esc(it.n) + '</span><span class="msg">' + MSGS[Math.floor(Math.random() * MSGS.length)] + "</span>";
+    history.unshift(it); history = history.slice(0, 5);
+    renderHistory();
+  }
+  function renderHistory() {
+    $("history").innerHTML = history.length
+      ? history.map(function (it, i) { return '<li><span class="no">' + (i === 0 ? "NOW" : "-" + i) + '</span><span class="e">' + (it.e || "🍽️") + "</span>" + esc(it.n) + "</li>"; }).join("")
+      : '<li class="empty">まだ回していません</li>';
+  }
+
+  /* ---------- 候補の選び方 ---------- */
+  function refresh() {
+    items = pickItems();
+    rotation = rotation % 360;
+    var svg = $("wheel");
+    svg.style.transition = "none"; svg.style.transform = "rotate(" + rotation + "deg)"; void svg.getBoundingClientRect(); svg.style.transition = "";
+    drawWheel();
+  }
+  function paintMode() {
+    [].forEach.call($("mode").children, function (b) { b.setAttribute("aria-pressed", b.dataset.v === state.mode ? "true" : "false"); });
+    $("preset-box").classList.toggle("hidden", state.mode !== "preset");
+    $("custom-box").classList.toggle("hidden", state.mode !== "custom");
+    $("reshuffle").classList.toggle("hidden", state.mode !== "preset");
+  }
+  $("mode").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b || spinning) return;
+    state.mode = b.dataset.v; save(); paintMode(); refresh();
+  });
+
+  $("genres").innerHTML = GENRES.map(function (g) { return '<button type="button" data-g="' + g.id + '">' + g.name + "</button>"; }).join("");
+  function paintGenres() { [].forEach.call($("genres").children, function (b) { b.setAttribute("aria-pressed", state.genres.indexOf(b.dataset.g) >= 0 ? "true" : "false"); }); }
+  $("genres").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b || spinning) return;
+    var g = b.dataset.g, i = state.genres.indexOf(g);
+    if (i >= 0) state.genres.splice(i, 1); else state.genres.push(g);
+    save(); paintGenres(); refresh();
+  });
+
+  $("custom").value = state.custom;
+  var t;
+  $("custom").addEventListener("input", function () {
+    state.custom = $("custom").value; save();
+    clearTimeout(t); t = setTimeout(function () { if (!spinning) refresh(); }, 250);
+  });
+
+  $("spin").addEventListener("click", spin);
+  $("reshuffle").addEventListener("click", function () { if (!spinning) refresh(); });
+
+  paintMode(); paintGenres(); renderHistory(); refresh();
+})();
+</script>
+</body>
+</html>
