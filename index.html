@@ -239,7 +239,8 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
         </div>
         <button class="lineup-btn" id="reshuffle" type="button"></button>
       </div>
-      <div class="result empty" id="result" aria-live="polite">ボタンを押すと、今日の晩ごはんが決まります</div>
+      <!-- 結果のカード（回して決まったときだけ表示） -->
+      <div class="result hidden" id="result" aria-live="polite"></div>
     </section>
 
     <section class="card">
