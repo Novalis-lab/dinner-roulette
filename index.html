@@ -125,7 +125,18 @@ svg.deco{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .spin:disabled::before{transform:scaleX(0)}
 .spin .en{font-family:var(--font-en);font-size:12px;letter-spacing:.2em}
 
-.sub-btns{display:flex;gap:8px;margin-top:10px}
+.lineup{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 12px 12px 16px;
+  border:1px solid var(--line);border-radius:var(--radius,8px);background:rgba(255,255,255,.03)}
+.lineup-info{min-width:0}
+.lineup-cap{display:block;font-size:11px;font-weight:700;letter-spacing:.16em;color:var(--sub)}
+.lineup-text{display:block;font-size:15px;font-weight:700;line-height:1.5}
+.lineup-btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:46px;padding:0 16px;border:1px solid var(--accent);border-radius:var(--radius,8px);
+  background:rgba(var(--accent-rgb),.12);color:var(--ink);font:inherit;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s,box-shadow .2s}
+.lineup-btn:hover{background:rgba(var(--accent-rgb),.25);box-shadow:0 0 14px 1px rgba(var(--accent-rgb),.45)}
+.lineup-btn:disabled{opacity:.4;cursor:default;box-shadow:none}
+.wheel-wrap.shuffle{animation:shuffle .5s cubic-bezier(.5,0,.3,1)}
+@keyframes shuffle{40%{transform:scale(.82) rotate(-12deg);opacity:.35}100%{transform:none;opacity:1}}
+@media (max-width:420px){.lineup{flex-direction:column;align-items:stretch}.lineup-btn{justify-content:center}}
 .ghost{flex:1;min-height:48px;border:1px solid var(--line);border-radius:var(--radius,8px);background:transparent;color:var(--sub);
   font:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:color .2s,border-color .2s}
 .ghost:hover{color:var(--accent);border-color:var(--accent)}
@@ -220,8 +231,13 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
         <div class="hub" id="hub" aria-hidden="true">SPIN</div>
       </div>
       <button class="spin" id="spin" type="button">ルーレットを回す<span class="en" aria-hidden="true">SPIN →</span></button>
-      <div class="sub-btns">
-        <button class="ghost" id="reshuffle" type="button">候補を入れかえる</button>
+      <!-- 今ルーレットに載っている料理の説明と、入れかえボタン -->
+      <div class="lineup">
+        <div class="lineup-info">
+          <span class="lineup-cap">今のルーレット</span>
+          <span class="lineup-text" id="lineup-text"></span>
+        </div>
+        <button class="lineup-btn" id="reshuffle" type="button"></button>
       </div>
       <div class="result empty" id="result" aria-live="polite">ボタンを押すと、今日の晩ごはんが決まります</div>
     </section>
@@ -237,7 +253,7 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
       <div class="field" id="preset-box">
         <span class="lbl">ジャンル（複数えらべます）</span>
         <div class="chips" id="genres"></div>
-        <p class="note">選んだジャンルの中から、ルーレットに載せる候補を8つ選びます。「候補を入れかえる」で選び直せます。</p>
+        <p class="note">選んだジャンルの中から、ルーレットに載せる料理を8品選びます。ルーレットの下の「🔄 別の料理にする」で、別の8品に入れかえられます。</p>
       </div>
       <div class="field hidden" id="custom-box">
         <label class="lbl" for="custom">メニュー（1行に1つ・2〜20個）</label>
@@ -509,12 +525,27 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
     var hub = $("hub"); hub.className = "hub"; hub.textContent = "SPIN"; hub.style.borderColor = "";
     $("stage").classList.remove("done");
     drawWheel();
+    paintLineup();
   }
   function paintMode() {
     [].forEach.call($("mode").children, function (b) { b.setAttribute("aria-pressed", b.dataset.v === state.mode ? "true" : "false"); });
     $("preset-box").classList.toggle("hidden", state.mode !== "preset");
     $("custom-box").classList.toggle("hidden", state.mode !== "custom");
-    $("reshuffle").classList.toggle("hidden", state.mode !== "preset");
+    $("reshuffle").innerHTML = state.mode === "preset"
+      ? '<span aria-hidden="true">🔄</span>別の料理にする'
+      : '<span aria-hidden="true">✏️</span>メニューを編集';
+  }
+  // 「今のルーレット」の説明
+  function paintLineup() {
+    var t;
+    if (state.mode === "custom") {
+      t = items.length >= 2 ? "自分で入力したメニュー " + items.length + "品" : "自分のメニューを2つ以上入れてください";
+    } else {
+      var names = GENRES.filter(function (g) { return state.genres.indexOf(g.id) >= 0; }).map(function (g) { return g.name; });
+      t = names.length ? "定番メニューから" + items.length + "品（" + names.join("、") + "）" : "ジャンルを選んでください";
+    }
+    $("lineup-text").textContent = t;
+    $("reshuffle").disabled = spinning || (state.mode === "preset" && items.length < 2);
   }
   $("mode").addEventListener("click", function (e) {
     var b = e.target.closest("button"); if (!b || spinning) return;
@@ -538,7 +569,17 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
   });
 
   $("spin").addEventListener("click", spin);
-  $("reshuffle").addEventListener("click", function () { if (!spinning) refresh(); });
+  $("reshuffle").addEventListener("click", function () {
+    if (spinning) return;
+    if (state.mode === "custom") {
+      $("custom-box").scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(function () { $("custom").focus({ preventScroll: true }); }, 400);
+      return;
+    }
+    var w = $("wheel-wrap");
+    w.classList.remove("shuffle"); void w.offsetWidth; w.classList.add("shuffle");
+    setTimeout(refresh, 200);   // 縮んだところで中身を入れかえる
+  });
 
   paintMode(); paintGenres(); renderHistory(); refresh();
 })();
