@@ -157,6 +157,7 @@ svg.deco{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:var(--radius,8px);overflow:hidden}
 .seg button{font:inherit;font-size:15px;font-weight:700;min-height:52px;padding:6px 8px;border:0;background:transparent;color:var(--sub);cursor:pointer;transition:color .2s,background .2s}
 .seg button+button{border-left:1px solid var(--line)}
+.seg4{grid-template-columns:repeat(4,1fr)}
 .seg button:hover{color:var(--ink)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -254,7 +255,16 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
       <div class="field" id="preset-box">
         <span class="lbl">ジャンル（複数えらべます）</span>
         <div class="chips" id="genres"></div>
-        <p class="note">選んだジャンルの中から、ルーレットに載せる料理を8品選びます。ルーレットの下の「🔄 別の料理にする」で、別の8品に入れかえられます。</p>
+        <p class="note">選んだジャンルの中から、下で選んだ数だけ料理をルーレットに載せます。ルーレットの下の「🔄 別の料理にする」で、別の料理に入れかえられます。</p>
+      </div>
+      <div class="field" id="size-box">
+        <span class="lbl">ルーレットに載せる数</span>
+        <div class="seg seg4" id="size">
+          <button type="button" data-v="6">6品</button>
+          <button type="button" data-v="8">8品</button>
+          <button type="button" data-v="10">10品</button>
+          <button type="button" data-v="12">12品</button>
+        </div>
       </div>
       <div class="field hidden" id="custom-box">
         <label class="lbl" for="custom">メニュー（1行に1つ・2〜20個）</label>
@@ -312,17 +322,18 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
   // ルーレットの扇の色（鮮やかな8色。候補8つなら全部ちがう色になる）
   var COLORS = ["#ff6b6b", "#ffa94d", "#ffd43b", "#69db7c", "#38d9a9", "#4dabf7", "#9775fa", "#f783ac"];
   var sliceColors = [];   // 今のルーレットの、扇ごとの色
-  var SIZE = 8;   // ルーレットに載せる候補の数（定番メニューのとき）
+  var SIZES = [6, 8, 10, 12];   // 定番メニューのとき、ルーレットに載せられる数（多すぎると文字が読めなくなるので12まで）
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
 
   /* ---------- 状態（モード・ジャンル・自分のメニューは端末に保存） ---------- */
-  var state = { mode: "preset", genres: ["wa", "yo", "chu", "other"], custom: "" };
+  var state = { mode: "preset", genres: ["wa", "yo", "chu", "other"], custom: "", size: 8 };
   try {
     var saved = JSON.parse(localStorage.getItem("novalis-dinner-roulette") || "{}");
     if (saved.mode) state.mode = saved.mode;
     if (Array.isArray(saved.genres)) state.genres = saved.genres;
+    if (SIZES.indexOf(saved.size) >= 0) state.size = saved.size;
     if (typeof saved.custom === "string") state.custom = saved.custom;
   } catch (e) {}
   function save() { try { localStorage.setItem("novalis-dinner-roulette", JSON.stringify(state)); } catch (e) {} }
@@ -346,7 +357,7 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
   function pickItems() {
     if (state.mode === "custom") return customItems();
     var pool = MENU.filter(function (m) { return state.genres.indexOf(m.g) >= 0; });
-    return shuffle(pool).slice(0, SIZE);
+    return shuffle(pool).slice(0, state.size);
   }
 
   /* ---------- ルーレットを描く ---------- */
@@ -532,6 +543,7 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
     [].forEach.call($("mode").children, function (b) { b.setAttribute("aria-pressed", b.dataset.v === state.mode ? "true" : "false"); });
     $("preset-box").classList.toggle("hidden", state.mode !== "preset");
     $("custom-box").classList.toggle("hidden", state.mode !== "custom");
+    $("size-box").classList.toggle("hidden", state.mode !== "preset");
     $("reshuffle").innerHTML = state.mode === "preset"
       ? '<span aria-hidden="true">🔄</span>別の料理にする'
       : '<span aria-hidden="true">✏️</span>メニューを編集';
@@ -569,6 +581,14 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
     clearTimeout(t); t = setTimeout(function () { if (!spinning) refresh(); }, 250);
   });
 
+  function paintSize() { [].forEach.call($("size").children, function (b) { b.setAttribute("aria-pressed", +b.dataset.v === state.size ? "true" : "false"); }); }
+  $("size").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b || spinning) return;
+    state.size = +b.dataset.v; save(); paintSize();
+    var w = $("wheel-wrap"); w.classList.remove("shuffle"); void w.offsetWidth; w.classList.add("shuffle");
+    setTimeout(refresh, 200);
+  });
+
   $("spin").addEventListener("click", spin);
   $("reshuffle").addEventListener("click", function () {
     if (spinning) return;
@@ -582,7 +602,7 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
     setTimeout(refresh, 200);   // 縮んだところで中身を入れかえる
   });
 
-  paintMode(); paintGenres(); renderHistory(); refresh();
+  paintMode(); paintGenres(); paintSize(); renderHistory(); refresh();
 })();
 </script>
 <canvas id="confetti" aria-hidden="true"></canvas>
