@@ -37,6 +37,8 @@ html{-webkit-text-size-adjust:100%;color-scheme:dark}
 body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:18px;line-height:1.6;overflow-x:hidden}
 ::selection{background:var(--accent);color:var(--accent-ink)}
 .hidden{display:none !important}
+/* iPhone で連打してもダブルタップで拡大・縮小しないように（ピンチでの拡大はそのまま使える） */
+button,a,input,textarea,select,label,summary,.stage,.chips,.seg,.lineup{touch-action:manipulation}
 
 /* ---------- 背景（縦のガイド線と斜めのライン：トップページと同じ） ---------- */
 .bg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
@@ -476,8 +478,15 @@ footer{margin-top:32px;padding:16px;border:1px solid var(--line);border-radius:v
       confetti();
       try { if (navigator.vibrate) navigator.vibrate([30, 40, 60]); } catch (e) {}
     }
-    svg.addEventListener("transitionend", finish, { once: true });
-    setTimeout(finish, 5800);   // 動きを止める設定などで transitionend が来なくても結果を出す
+    // ルーレット本体の「回転」が終わったときだけ結果を出す
+    // （中の扇の明るさがもとに戻る動きなど、ほかの動きの終わりには反応しない）
+    function onEnd(e) {
+      if (e.target !== svg || e.propertyName !== "transform") return;
+      svg.removeEventListener("transitionend", onEnd);
+      finish();
+    }
+    svg.addEventListener("transitionend", onEnd);
+    setTimeout(function () { svg.removeEventListener("transitionend", onEnd); finish(); }, 5800);   // 動きを止める設定などで合図が来なくても結果を出す
   }
 
   /* ---------- 紙吹雪 ---------- */
